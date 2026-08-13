@@ -46,6 +46,10 @@ a pasar.
   elegís. Moverse por la lista cuesta ~70 ms en vez de segundo y medio.
 * **`--lang lat|esp|sub|dub`** para forzar el idioma en vez de rezarle al orden interno. Si esa
   pista no existe te lo dice en la cara, no te pone otra cosa a traición.
+* **Latanime como fuente**, que es la única con doblajes de verdad. El resto son casi todas de
+  subtitulado, así que sin esto `--lang lat` no tenía de dónde sacar nada. Ahora el selector te
+  marca `[LATINO]`, `[CASTELLANO]` o `[SUB]` directo en la lista, y cuando pedís doblaje Latanime
+  se busca de primero.
 * **Historial decente**: progreso `12/24`, lo último visto hasta arriba, y `--forget` para borrar
   una sola serie (antes era borrar todo o nada, muy elegante).
 * **`--debug` y `--stats`** para cuando algo falla y querés saber xq.
@@ -145,8 +149,10 @@ ani --stats "one piece"    # qué servidor sirvió y cuáles se cayeron
 * **"No se encontraron resultados"** → probá con el nombre en japonés. *Call of the Night* está como
   *Yofukashi no Uta* en casi todas las fuentes, por ejemplo.
 
-* **Sale subtitulado cuando pediste doblaje** → ese anime no tiene doblaje en esa fuente, así de
-  simple. El preview te muestra las pistas antes de elegir, ahí se ve rapidito.
+* **Sale subtitulado cuando pediste doblaje** → probá `ani --source latanime --lang lat "loquesea"`,
+  que es la fuente que tiene doblajes. Si ahí tampoco está, ese anime simplemente no está doblado
+  (le pasa a *Call of the Night*, por ejemplo). El selector te marca la pista de cada resultado, ahí
+  se ve rapidito.
 
 * **Todo se rompió y querés llorar** → respirá. Estas páginas cambian de HTML cada dos por tres y a
   veces el scraper se cae. Abrí un issue y lo vemos.
