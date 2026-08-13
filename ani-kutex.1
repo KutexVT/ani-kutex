@@ -1,0 +1,202 @@
+.TH "ANI-CLI-MX" "1" "July 2026" "ani-cli-mx" "User Commands"
+.SH NAME
+ani-cli-mx \- watch anime from the command line with Spanish-first sources
+.SH SYNOPSIS
+.B ani-cli-mx
+[\fI\,OPTIONS\/\fR]
+.SH DESCRIPTION
+A shell script to browse and search anime from the command-line.
+.PD 0
+.P
+.PD
+This fork tries JKAnime first, then AnimeAV1 and AnimeFLV. Searches group Spanish results before English results from AniDB and AnimeX. When Spanish playback sources fail, it tries AniDB and then AnimeX. Windows is supported without WSL by using Git for Windows as the shell runtime and native Windows media players.
+.PD 0
+.P
+.PD
+\f[B]ani-cli-mx\f[R] without options defaults to iina on macOS, flatpak mpv on Steamdeck, mpv apk on android, vlc on iOS and mpv media player everywhere else.
+.SH DEPENDENCIES
+.PP
+The required command-line tools are curl, sed, grep, fzf, and a supported media player. Native Windows installations use Git for Windows as the Bash runtime and Scoop declares curl, sed, grep, fzf, and mpv as package dependencies. Git must be installed before adding the Scoop buckets because buckets are Git repositories.
+.PP
+aria2, ffmpeg, and yt-dlp are optional download tools. VLC is an optional alternate media player.
+curl-impersonate is optional but required for AniDB because AniDB currently rejects regular curl through Cloudflare.
+.SH OPTIONS
+.TP
+\fB\-e | --episode | -r | --range\fR \fI\,<episode>\/\fR
+Specify the episode numbers to watch. If range is specified it should be quoted or separated by a non-numeric character (eg. -).
+.TP
+\fB\-c | --continue\fR
+Continue watching anime from history.
+.TP
+\fB\-d | --download\fR
+Download episode.
+.TP
+\fB\-D | --delete\fR
+Delete history.
+.TP
+\fB\-l | --logview\fR
+Show logs.
+.TP
+\fB\-h | --help\fR
+Show summary of options.
+.TP
+\fB\-q | --quality\fR \fI\,<best|worst|360|480|720|1080>\/\fR
+Set the video quality. Default quality is best.
+.TP
+\fB--lang\fR \fI\,<lat|esp|sub|dub>\/\fR
+Preferred audio track. Asking for a dubbed track implies --dub. If the track is not available for the episode, ani-kutex says so and falls back instead of failing silently.
+.TP
+\fB--debug\fR
+Print the resolved links and the selected source instead of playing. Equivalent to ANI_CLI_PLAYER=debug.
+.TP
+\fB--stats\fR
+On exit, print which server played and which mirrors were discarded.
+.TP
+\fB--no-notify\fR
+Do not send a desktop notification when an episode starts.
+.TP
+\fB--forget\fR
+Pick a series from the history and remove just that entry.
+.TP
+\fB\-s | --syncplay\fR
+Watch anime together with friends, using Syncplay (works with mpv only).
+.TP
+\fB\-U | --update\fR
+Fetch an update from the configured fork URL.
+For Scoop-managed Windows installations, delegate the update to Scoop.
+.TP
+\fB\-v | --vlc\fR
+Use VLC as the media player.
+.TP
+\fB\-S | --select-nth\fR \fI\,<index>\/\fR
+Selects nth entry.
+.TP
+\fB\-f | --fast | --fast-mode\fR
+Fast mode is the default. Keep using the chosen Spanish source for later episodes in the same session. If that source stops producing valid links, fall back to the normal source search and skip the failed source for the rest of the session.
+.TP
+\fB\--slow | --classic | --no-fast\fR
+Use the previous source search behavior, checking sources again for each episode.
+.TP
+\fB\--continuous | --auto-next\fR
+Start in continuous playback mode. This requires mpv because ani-cli-mx must detect when the player process finishes. With this flag, ani-cli-mx starts playback and opens the playback menu with continuous mode already enabled. The menu shows the current mode and can toggle it with activar_modo_continuo or desactivar_modo_continuo; when enabled from the menu, ani-cli-mx tracks the currently running player if possible, otherwise the next episode played from the menu advances automatically after its player finishes.
+.TP
+\fB\--close-previous\fR
+Close the previous tracked player before opening another episode from the playback menu. This can also be toggled from the playback menu with activar_cerrar_reproductor_anterior or desactivar_cerrar_reproductor_anterior.
+.TP
+\fB\--source | --info-source\fR \fI\,<auto|animeflv|jkanime|animeav1|anidb|animex>\/\fR
+Choose which source provides search results and episode information. Default is auto.
+.TP
+\fB\-N | --nextep-countdown\fR
+Prints a countdown to the next episode as the last episode in the list. If in history is after the current episode.
+.TP
+\fB\--dub\fR
+Play the dubbed version. Without this flag, it'll always play the subbed version.
+.TP
+\fB\--rofi\fR
+Use rofi instead of fzf for the interactive menu
+.TP
+\fB\--skip\fR
+Use ani-skip to skip the intro of the episode (mpv only)
+.TP
+\fB\--no-detach\fR
+Don't detach the player (useful for in-terminal playback, mpv only)
+.TP
+\fB\--exit-after-play\fR
+Exit the player, and return the player exit code (useful for non interactive scenarios, mpv only)
+.TP
+\fB\--skip-title\fR \fI\,<title>\/\fR
+Specify the title to use for ani-skip
+.PP
+.SH
+ENVIRONMENT VARIABLES
+.PP
+ani-cli-mx uses environment variables to control unstable/untested and niche features in addition to everything that has an option. Command-line options take precedence over env vars. Note that these are all subject to change.
+.TP
+\fBANI_CLI_MODE\fR
+Controls the scraped media's mode, valid options are sub or dub. Default is sub.
+.TP
+\fBANI_CLI_DOWNLOAD_DIR\fR
+Controls the directory where files are downloaded. Default is the user's Downloads/Descargas directory.
+.TP
+\fBANI_CLI_QUALITY\fR
+Controls the scraped media's quality. Check the active source for valid options or set to worst/best. Default is best.
+.TP
+\fBANI_CLI_PLAYER\fR
+Sets the player ani-cli-mx uses. Can be debug (print links), download (equivalent to -d), android_mpv (apk and am start), android_vlc (apk and am start), flatpak_mpv (for flatpak), catt (for streaming to tv), or any player that can play urls. For defaults see working without arguments.
+.TP
+\fBANI_CLI_EXTERNAL_MENU\fR
+Controls the frontend of ani-cli-mx. Can be 0 (uses fzf) or 1 (uses rofi dmenu). Default is 0.
+.TP
+\fBANI_CLI_EXTERNAL_MENU_NORMAL_WINDOW\fR
+Controls the way rofi displays the window. Can be 0 (no additional arguments passed to rofi) or 1 (the menu is displayed as a normal window, -normal-window argument is passed to rofi). Default is 0.
+.TP
+\fBANI_CLI_LOG_EPISODE\fR
+Controls the logging feature for playback. Can be 1(logs) or 0(doesn't log). Default is 1.
+.TP
+\fBANI_CLI_MULTI_SELECTION\fR
+Controls the multi flag for the chosen frontend. Default is -m for fzf and --multi-select for rofi dmenu.
+.TP
+\fBANI_CLI_HIST_DIR\fR
+Controls the directory ani-cli-mx uses for storing history. On Windows the default is %LOCALAPPDATA%\ani-cli-mx. Elsewhere it is $XDG_STATE_HOME/ani-cli-mx if set, otherwise $HOME/.local/state/ani-cli-mx.
+.TP
+\fBANI_CLI_DEFAULT_SOURCE\fR
+Controls the default source. Valid is history (equivalent to -c), everything else means search. Default is search.
+.TP
+\fBANI_CLI_INFO_SOURCE\fR
+Controls which source provides search results and episode information. Valid options are auto, animeflv, jkanime, animeav1, anidb, and animex. Default is auto.
+.TP
+\fBANI_CLI_ANIDB_CURL\fR
+Path to a compatible curl-impersonate executable used for AniDB requests.
+.TP
+\fBANI_CLI_FAST_MODE\fR
+Controls fast mode. Can be 1 (enabled) or 0 (classic source search). Default is 1.
+.TP
+\fBANI_CLI_CONTINUOUS\fR
+Controls continuous playback. Can be 1 (enabled) or 0 (disabled). Default is 0.
+.TP
+\fBANI_CLI_CLOSE_PREVIOUS\fR
+Controls whether ani-cli-mx closes the previous tracked player before opening another episode from the playback menu. Can be 1 (enabled) or 0 (disabled). Default is 0.
+.TP
+\fBANI_CLI_SKIP_INTRO\fR
+Controls if ani-skip is used to skip intros (works with mpv only). Can be 0 (disabled) or 1 (enabled). Default is 0.
+.TP
+\fBANI_CLI_NO_DETACH\fR
+Controls if mpv is detached from the main process for playback, which can be useful for use with terminal renderers such as kitty. (works with mpv only). Can be 0 (disabled) or 1 (enabled). Default is 0.
+.TP
+\fBANI_CLI_SKIP_TITLE\fR
+Overrides the anime title to query for skip times. Can be any string value. Default is empty, resolving to the anime title as given by ani-cli-mx.
+.TP
+\fBANI_CLI_UPDATE_URL\fR
+Sets the raw script URL used by \fB\-U\fR. This fork does not self-update from upstream by default.
+.TP
+\fBANI_CLI_WINDOWS\fR
+Marks an invocation as native Windows. The official Windows launcher sets this automatically.
+.TP
+\fBANI_CLI_PACKAGE_MANAGER\fR
+Identifies the package manager responsible for updates. The Scoop launcher sets this to scoop.
+.PP
+.SH EPISODE SELECTION
+.PP
+Multiple episodes can be chosen using fzf (or alternative frontend's) multi-selection mode. For this refer to their instructions.
+.PP
+When the selected anime already exists in history, the episode selector marks the last watched episode with \fB*\fR and shows \fB(* ultimo visto)\fR in the prompt.
+.SH BUGS
+.PP
+Use the GitHub issue tracker:
+your fork repository issue tracker
+.SH COPYRIGHT
+.PP
+ani-cli-mx is licensed under the GNU General Public License v3.0
+.PP
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+.PP
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+.PP
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
