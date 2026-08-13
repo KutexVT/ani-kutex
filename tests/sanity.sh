@@ -247,7 +247,8 @@ run_anidb_provider_smoke() {
         anidb_selected_ref_key=""
 
         search_result="$(search_anidb_catalog one+piece)"
-        [ "$search_result" = "one-piece-3880	One Piece" ]
+        # tercer campo: portada, vacia cuando el resultado no trae <img src>
+        [ "$search_result" = "one-piece-3880	One Piece	" ]
         [ "$(anidb_episode_maps "$id" 'One Piece' | cut -f2)" = "1
 2" ]
         links="$(resolve_anidb_episode 'One Piece' 1)"

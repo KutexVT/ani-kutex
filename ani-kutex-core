@@ -713,6 +713,23 @@ preview_source_meta() {
                 meta_page="$(curl -sL --connect-timeout 4 --max-time 8 -A "$agent" "${jkanime_refr}/${2}/" 2>/dev/null | tr '\n' ' ')"
                 meta_synopsis="$(printf '%s' "$meta_page" | grep -oE '<p class="scroll">[^<]+' | head -n 1 | sed 's|.*>||')"
                 ;;
+            anidb)
+                meta_page="$(curl -sL --connect-timeout 4 --max-time 8 -A "$agent" "${anidb_refr}/anime/${2}" 2>/dev/null | tr '\n' ' ')"
+                meta_synopsis="$(printf '%s' "$meta_page" | grep -oE '<p class="text-sm text-faint leading-relaxed">[^<]+' | head -n 1 | sed 's|.*>||')"
+                ;;
+            animex)
+                # el catalogo solo se puede consultar por texto, asi que se busca
+                # por el slug y se queda con el item cuyo id coincide
+                meta_query="$(printf '%s' "$2" | sed 's|-[a-z0-9]*$||; s|-| |g')"
+                meta_gql='query D($query:String,$limit:Int){catalogAnime(filter:{query:$query},limit:$limit){items{id description}}}'
+                meta_page="$(curl -sL --connect-timeout 4 --max-time 8 -A "$agent" -H "Content-Type: application/json" \
+                    -X POST "${animex_graphql}/graphql" \
+                    --data "{\"query\":\"${meta_gql}\",\"variables\":{\"query\":\"${meta_query}\",\"limit\":12}}" 2>/dev/null)"
+                meta_synopsis="$(printf '%s' "$meta_page" | sed 's|},{"id"|}\
+{"id"|g' | grep -F "\"id\":\"${2}\"" |
+                    sed -nE 's|.*"description":"([^"]*)".*|\1|p' | head -n 1 |
+                    sed 's|<br */*>| |g; s|</*[a-z]*>||g; s|\\n| |g; s|\\r||g' | decode_json_escapes)"
+                ;;
             animeflv)
                 meta_page="$(curl -sL --connect-timeout 4 --max-time 8 -A "$agent" "${animeflv_refr}/wp-json/wp/v2/categories?slug=${2}" 2>/dev/null | tr '\n' ' ')"
                 # el "description" de la categoria es la sinopsis; el de yoast_head_json
@@ -788,11 +805,28 @@ render_preview_entry() {
             # panel alto las pixela: se les pone tope para que reduzcan en vez
             # de ampliar y se vean nitidas
             [ "$img_rows" -gt "$preview_image_max_rows" ] && img_rows="$preview_image_max_rows"
-            # --scale-up es lo que hace que la imagen ocupe SIEMPRE las filas
-            # reservadas: sin esto se dibuja a su tamano natural, ocupa menos de
-            # las que se reservaron y el texto queda empujado fuera de la vista
+
+            # --place escala la imagen para CABER en el rectangulo manteniendo su
+            # proporcion, asi que si el panel es estrecho el ancho manda y la
+            # imagen acaba ocupando menos filas de las reservadas. Saltar las
+            # reservadas a ciegas es lo que dejaba el hueco: aqui se calculan las
+            # filas que la portada va a ocupar de verdad.
+            # En celdas: ancho = alto * (2 * img_w / img_h), asumiendo que una
+            # celda es el doble de alta que de ancha (lo habitual en kitty).
+            img_cols="${FZF_PREVIEW_COLUMNS:-40}"
+            img_dims="$(file -b "$cover_file" 2>/dev/null | grep -oE 'precision [0-9]+, [0-9]+x[0-9]+' | grep -oE '[0-9]+x[0-9]+' | tail -n 1)"
+            img_w="${img_dims%x*}"
+            img_h="${img_dims#*x}"
+            if [ -n "$img_w" ] && [ -n "$img_h" ] && [ "$img_w" -gt 0 ] && [ "$img_h" -gt 0 ]; then
+                needed_cols=$(((2 * img_w * img_rows) / img_h))
+                if [ "$needed_cols" -gt "$img_cols" ]; then
+                    img_rows=$(((img_cols * img_h) / (2 * img_w)))
+                    [ "$img_rows" -lt 3 ] && img_rows=3
+                fi
+            fi
+
             kitten icat --clear --transfer-mode=memory --stdin=no --unicode-placeholder --scale-up \
-                --place="${FZF_PREVIEW_COLUMNS:-40}x${img_rows}@0x0" "$cover_file" 2>/dev/null
+                --place="${img_cols}x${img_rows}@0x0" "$cover_file" 2>/dev/null
             img_row=0
             while [ "$img_row" -lt "$img_rows" ]; do
                 printf '\n'
@@ -1823,7 +1857,9 @@ search_anidb_catalog() {
     printf '%s' "$anidb_page" | grep -qi "Just a moment" && return 1
     printf '%s' "$anidb_page" | tr '\n' ' ' | sed 's|<a href|\
 <a href|g' |
-        sed -nE 's|.*anime/([a-z0-9-]+-[0-9]+)".*alt="([^"]+)".*|\1\t\2|p' |
+        sed -nE 's|.*anime/([a-z0-9-]+-[0-9]+)".*<img src="([^"]+)" alt="([^"]+)".*|\1\t\3\t\2|p
+t
+s|.*anime/([a-z0-9-]+-[0-9]+)".*alt="([^"]+)".*|\1\t\2\t|p' |
         sed -e "s|&#039;|'|g" -e 's|&quot;|"|g' | stable_unique_lines
 }
 
