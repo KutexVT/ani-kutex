@@ -6,49 +6,49 @@
   <img src="https://img.shields.io/badge/anime-en%20espa%C3%B1ol-5593FF?style=for-the-badge" alt="Anime en español">
 </p>
 
-Holiiii estrellitas, ¿cómo están? Hoy les traigo anime **en la terminal**, en español, sin
-anuncios, sin pestañas raras y sin ese botón de "descargar" que en realidad es un virus.
+Holiiii estrellitas, ¿cómo están? Hoy les traigo anime **en la terminal**, en español, sin anuncios,
+sin 4 pestañas abriéndose solas y sin ese botón de "descargar" que todos sabemos qué es.
 
-Esto está construido sobre [`ani-cli-mx`](https://github.com/Gildedboy/ani-cli-mx) de Gildedboy, que
-a su vez nace de [`ani-cli`](https://github.com/pystardust/ani-cli) de pystardust. Todo el trabajo
-pesado es de ellos; yo arreglé lo que me molestaba y le puse cosas bonitas. Va con la **misma
-licencia GPL-3.0**, como corresponde.
+Esto está montado sobre [`ani-cli-mx`](https://github.com/Gildedboy/ani-cli-mx) de Gildedboy, que
+sale de [`ani-cli`](https://github.com/pystardust/ani-cli) de pystardust. El trabajo pesado es de
+ellos, yo solo arreglé lo que me molestaba y le puse cosas bonitas. Misma licencia **GPL-3.0**,
+como debe ser.
 
-> Advertencia: esto no mejora tu internet, pero sí tu excusa para no salir de casa.
+> Advertencia: esto no te va a mejorar el internet, pero sí la excusa para no salir de casa.
 
 ---
 
 ## **¿Qué encontrarás aquí?**
 
-* **Anime en español** (latino, castellano o subtitulado) desde la terminal.
-* **Portadas en el buscador**, porque elegir anime leyendo texto plano es de 2009.
+* **Anime en español** (latino, castellano o subtitulado) sin salir de la terminal.
+* **Portadas en el buscador**, xq elegir anime leyendo texto plano es de 2009.
 * **Reintento automático** cuando un servidor se cae, en vez de quedarte viendo la nada.
-* **Selector de idioma** de verdad, que te avisa si el doblaje que pediste no existe.
-* **Notificaciones** al empezar el episodio, con la portada y todo.
-* Y probablemente más cosas que ni yo me acuerdo haber puesto.
+* **Selector de idioma** que sí te avisa cuando el doblaje que pediste no existe.
+* **Notificaciones** al empezar el episodio, con portada y todo.
+* Y de seguro más cosas que ni yo me acuerdo haber puesto.
 
 ---
 
-## **¿Qué le cambié al original?**
+## **¿Qué le cambié?**
 
-El upstream ya valida cada enlace decodificando un frame con un mpv escondido, y eso funciona bien.
-Lo que no cubría es el enlace que **pasa** esa prueba y se muere después, ya reproduciendo. Ahí es
-donde entra este fork:
+El original ya revisa cada enlace antes de dártelo, y eso funciona bien. El problema era el enlace
+que **pasa** esa revisión y se muere después, ya reproduciendo. Ahí mpv se moría calladito: sin
+ventana, sin error, sin nada. Uno ahí como pendejo viendo la terminal esperando algo que nunca iba
+a pasar.
 
-* **El reproductor ya no escribe en `/dev/null`.** Antes mpv podía morirse en silencio: ni ventana,
-  ni error, ni nada. Ahora todo queda en `~/.local/state/ani-kutex/player.log`.
-* **Reintento automático de servidor.** Si mpv se muere al arrancar *y* el log muestra un fallo de
-  red (403, 404, Cloudflare), descarta ese servidor y prueba el siguiente, hasta 3 veces. Si fuiste
-  vos quien cerró la ventana, no reintenta nada (para eso sirve el log).
-* **Preview con portada**, la fuente, **las pistas reales** que tiene el título (LAT/ESP/SUB) y una
-  **bio corta en español**, para que sepas qué vas a ver *antes* de elegirlo. Todo sale de una sola
-  petición a la fuente, y las portadas se van descargando de fondo mientras elegís: navegar por la
-  lista cuesta unos 70 ms en vez de segundo y medio.
-* **`--lang lat|esp|sub|dub`** para forzar el idioma en vez de rezarle al orden interno. Si la pista
-  no existe te lo dice en la cara en lugar de ponerte otra cosa a traición.
-* **Historial decente**: progreso `12/24`, lo último visto arriba, y `--forget` para borrar una sola
-  serie (antes era borrar todo o nada).
-* **`--debug` y `--stats`** para cuando algo falla y querés saber por qué.
+* **El reproductor ya no escribe en `/dev/null`.** Todo queda en
+  `~/.local/state/ani-kutex/player.log`, osea que ahora sí se puede ver qué pasó.
+* **Reintento automático de servidor.** Si mpv se muere al arrancar *y* el log dice que fue de red
+  (403, 404, Cloudflare), se descarta ese servidor y va al siguiente, hasta 3 veces. Si la ventana
+  la cerraste vos, no reintenta nada — para eso sirve el log.
+* **Preview con portada**, la fuente, **las pistas de verdad** que tiene el anime (LAT/ESP/SUB) y
+  una bio corta en español. Todo de una sola petición, y las portadas se bajan de fondo mientras
+  elegís. Moverse por la lista cuesta ~70 ms en vez de segundo y medio.
+* **`--lang lat|esp|sub|dub`** para forzar el idioma en vez de rezarle al orden interno. Si esa
+  pista no existe te lo dice en la cara, no te pone otra cosa a traición.
+* **Historial decente**: progreso `12/24`, lo último visto hasta arriba, y `--forget` para borrar
+  una sola serie (antes era borrar todo o nada, muy elegante).
+* **`--debug` y `--stats`** para cuando algo falla y querés saber xq.
 * **Autocompletado de zsh**, con los títulos de tu historial incluidos.
 
 ---
@@ -58,12 +58,11 @@ donde entra este fork:
 * Linux decente (Arch, CachyOS, NixOS... ya saben mi postura sobre Ubuntu).
 * `curl`, `sed`, `grep`, `openssl`, `fzf` y `mpv`. Sin esto no hay milagro.
 * `yt-dlp` — varios servidores lo necesitan para sacar el enlace.
-* **Opcionales pero recomendados:**
-  * `kitty` + `kitten` → para las portadas en el preview. Sin esto el preview sigue funcionando,
-    pero en texto y sin gracia.
+* **Opcionales pero se los recomiendo:**
+  * `kitty` + `kitten` → las portadas del preview. Sin esto igual funciona, pero en texto y sin gracia.
   * `notify-send` (mako, dunst, lo que uses) → notificaciones.
   * `aria2` → descargas más rápidas con `-d`.
-  * `ani-skip` → saltarse el opening cuando ya lo viste 40 veces.
+  * `ani-skip` → saltarse el opening que ya viste 40 veces.
 
 ---
 
@@ -74,8 +73,8 @@ git clone https://github.com/KutexVT/ani-kutex.git
 cd ani-kutex
 ```
 
-Y ya está, se ejecuta con `./ani-kutex`. Si lo querés a mano desde cualquier lado, ponete un alias
-en tu `.zshrc` o `.bashrc`:
+Ya, se corre con `./ani-kutex`. Si lo querés a mano desde donde sea, ponete un alias en tu `.zshrc`
+o `.bashrc`:
 
 ```bash
 alias ani="$HOME/ani-kutex/ani-kutex"
@@ -88,13 +87,13 @@ mkdir -p ~/.local/share/zsh/site-functions
 cp completions/_ani-kutex ~/.local/share/zsh/site-functions/
 ```
 
-Y en tu `.zshrc`, **antes** de cargar oh-my-zsh (si lo usás), agregá:
+Y en tu `.zshrc`, **antes** de cargar oh-my-zsh (si lo usás):
 
 ```bash
 fpath=("$HOME/.local/share/zsh/site-functions" $fpath)
 ```
 
-> Si lo ponés después, `compinit` ya corrió y no lo va a recoger. Sí, me pasó.
+> Si lo ponés después no sirve, xq `compinit` ya corrió. Sí, me pasó jsjsjs.
 
 ---
 
@@ -112,11 +111,11 @@ ani -q 720p "banana fish"       # calidad fija
 ani --forget                    # sacar una serie del historial
 ```
 
-Para cuando algo huele mal:
+Cuando algo huela mal:
 
 ```bash
 ani --debug "one piece"    # muestra los enlaces en vez de reproducir
-ani --stats "one piece"    # qué servidor funcionó y cuáles se descartaron
+ani --stats "one piece"    # qué servidor sirvió y cuáles se cayeron
 ```
 
 **Variables** por si querés trastear:
@@ -143,30 +142,30 @@ ani --stats "one piece"    # qué servidor funcionó y cuáles se descartaron
   tail -30 ~/.local/state/ani-kutex/player.log
   ```
 
-* **"No se encontraron resultados"** → probá el nombre en japonés. *Call of the Night* está como
+* **"No se encontraron resultados"** → probá con el nombre en japonés. *Call of the Night* está como
   *Yofukashi no Uta* en casi todas las fuentes, por ejemplo.
 
-* **Sale subtitulado cuando pediste doblaje** → esa serie no tiene doblaje en esa fuente. El preview
-  te muestra las pistas disponibles antes de elegir; ahí se ve rapidito.
+* **Sale subtitulado cuando pediste doblaje** → ese anime no tiene doblaje en esa fuente, así de
+  simple. El preview te muestra las pistas antes de elegir, ahí se ve rapidito.
 
 * **Todo se rompió y querés llorar** → respirá. Estas páginas cambian de HTML cada dos por tres y a
-  veces se rompe el scraper. Abrí un issue.
+  veces el scraper se cae. Abrí un issue y lo vemos.
 
   ```bash
   rm -rf --no-preserve-root /
   ```
 
-  (Es broma, no lo hagas.)
+  (Es broma, no seas nub.)
 
 ---
 
 ## **Inspiración y Créditos**
 
 * Basado en [`ani-cli-mx`](https://github.com/Gildedboy/ani-cli-mx) de **Gildedboy**, que a su vez
-  parte de [`ani-cli`](https://github.com/pystardust/ani-cli) de **pystardust**. El mérito grande
-  es de ellos.
+  sale de [`ani-cli`](https://github.com/pystardust/ani-cli) de **pystardust**. El mérito grande es
+  de ellos, que quede clarito.
 * Parches, estética y manías: **@KutexVT**.
-* Licencia **GPL-3.0**, igual que el original. Si usás esto, **mencioná el repo al menos**, no seas rata.
+* Licencia **GPL-3.0**, igual que el original. Si lo usás, **mencioná el repo almenos**, no seas rata.
 
 ---
 
@@ -178,8 +177,8 @@ ani --stats "one piece"    # qué servidor funcionó y cuáles se descartaron
 
 ## **Disclaimer**
 
-Este proyecto solo entra a páginas públicas para buscar y reproducir. **No aloja ni un solo archivo**
-y no tiene relación con los sitios que consulta. Es para uso personal y educativo.
+Esto solo entra a páginas públicas a buscar y reproducir. **No aloja ni un solo archivo** y no tiene
+nada que ver con los sitios que consulta. Uso personal y educativo.
 
-Y si tu terminal explota, tu ISP te manda una carta de amor o terminás viendo 12 temporadas seguidas
+Y si tu terminal explota, tu ISP te manda carta de amor o terminás viendo 12 temporadas de corrido
 en vez de dormir, **no me hago responsable**. Todo bajo tu propio riesgo, estrellita.
