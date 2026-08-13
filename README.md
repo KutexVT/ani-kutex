@@ -1,6 +1,28 @@
-# ani-cli-mx
+# ani-kutex
 
-`ani-cli-mx` is a Spanish-first anime CLI for the terminal.
+`ani-kutex` is a personal fork of [`ani-cli-mx`](https://github.com/Gildedboy/ani-cli-mx) by Gildedboy,
+which is itself a Spanish-first fork of [`ani-cli`](https://github.com/pystardust/ani-cli) by pystardust.
+All credit for the upstream work belongs to them. Licensed under GPL-3.0, same as upstream.
+
+## What this fork changes
+
+Upstream validates every candidate link by decoding one frame with a hidden mpv
+(`probe_link_with_mpv`), which is a solid check. What it does not cover is the link that passes
+that probe and *then* fails during real playback. This fork closes that gap:
+
+- **The player no longer writes to `/dev/null`.** Its output goes to a log
+  (`$XDG_STATE_HOME/ani-kutex/player.log`), so a failure after startup leaves a trace instead of
+  a window that never appears.
+- **Automatic server retry.** If the player dies on startup *and* the log shows a network failure
+  (403/404, `Failed to open`, Cloudflare), the mirror is marked as failed and the episode is
+  re-resolved with the next server, up to 3 attempts (`ANI_CLI_PLAYER_RETRIES`). A player closed
+  by the user is not retried — the log is what tells the two apart.
+- **`--debug`** as a real flag. Upstream has the `debug` player mode but it can only be reached
+  through `ANI_CLI_PLAYER=debug`; passing `--debug` leaked it into the search query instead.
+- **`--stats`** prints which server played and which mirrors were discarded, on exit.
+
+Tunables: `ANI_CLI_PLAYER_GRACE` (seconds to wait before deciding the player died, default 4),
+`ANI_CLI_PLAYER_RETRIES` (default 3), `ANI_CLI_PLAYER_LOG` (log path).
 
 This is an independent community project. It is not affiliated with, maintained by, or endorsed by any other project or team.
 

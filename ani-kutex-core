@@ -73,6 +73,10 @@ help_info() {
         Close the previous tracked player before opening another episode
       -q, --quality
         Specify the video quality
+      --debug
+        Print the resolved links and the chosen source instead of playing
+      --stats
+        Show which servers worked and which were discarded on exit
       -v, --vlc
         Use VLC to play the video
       -V, --version
@@ -120,9 +124,9 @@ version_info() {
 update_script() {
     if [ "${ANI_CLI_PACKAGE_MANAGER:-}" = "scoop" ]; then
         command -v powershell.exe >/dev/null 2>&1 ||
-            die 'No se encontro PowerShell. Actualiza con: scoop update ani-cli-mx'
+            die 'No se encontro PowerShell. Actualiza con: scoop update ani-kutex'
         MSYS2_ARG_CONV_EXCL='*' powershell.exe -NoProfile -ExecutionPolicy Bypass \
-            -Command 'scoop update ani-cli-mx'
+            -Command 'scoop update ani-kutex'
         exit $?
     fi
     [ -z "$update_url" ] && die "La auto-actualizacion no esta configurada para este fork. Define ANI_CLI_UPDATE_URL."
@@ -1161,6 +1165,7 @@ extract_jkanime_links() {
     player_entries="$(printf '%s' "$jkanime_page" | tr '\n' ' ' |
         grep -oE "video\\[[0-9]+\\][[:space:]]*=[[:space:]]*'<iframe[^']*src=\"[^\"]+\"" |
         sed -E 's|.*src="([^"]+)"$|\1|')"
+    disabled_mirrors="$(disabled_source_mirrors_for_source "jkanime")"
     old_ifs=$IFS
     IFS='
 '
@@ -1169,8 +1174,12 @@ extract_jkanime_links() {
         case "$player_url" in
             /*) player_url="${jkanime_refr}${player_url}" ;;
         esac
-        direct_link="$(extract_jkanime_internal_source "$player_url")"
         source_name="$(jkanime_internal_player_name "$player_url")"
+        if source_mirror_is_disabled_in_list "jkanime" "$source_name" "$disabled_mirrors"; then
+            source_status "$source_name" "disabled"
+            continue
+        fi
+        direct_link="$(extract_jkanime_internal_source "$player_url")"
         if [ -n "$direct_link" ]; then
             if ! printf '%s' "$internal_links" | grep -Fq ">${direct_link}"; then
                 internal_links="${internal_links}$(jkanime_internal_player_priority "$player_url") >${direct_link}
@@ -2434,6 +2443,42 @@ download() {
     esac
 }
 
+# disable_source_mirror solo marca mirrors durante el fast mode y para la fuente
+# activa; cuando el fallo lo detecta el reproductor hay que poder descartarlo igual
+force_disable_source_mirror() {
+    [ -n "$1" ] && [ -n "$2" ] || return 1
+    mirror_key="$(normalize_mirror_name "$2")"
+    # find_link_site devuelve el nombre con mayusculas (JKAnime), pero los
+    # resolvedores consultan la lista con la clave en minusculas (jkanime)
+    site_key="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+    [ -n "$mirror_key" ] || return 1
+    [ -n "$fast_mode_mirror_file" ] || return 1
+    mirror_entry="${site_key}>${mirror_key}"
+    [ -f "$fast_mode_mirror_file" ] && grep -Fxq "$mirror_entry" "$fast_mode_mirror_file" && return 0
+    printf '%s\n' "$mirror_entry" >>"$fast_mode_mirror_file"
+}
+
+# el reproductor puede morir porque el mirror no sirve o porque el usuario cerro
+# la ventana enseguida; solo el primer caso justifica reintentar con otro servidor
+player_died_on_startup() {
+    [ -n "$1" ] || return 1
+    sleep "$player_grace"
+    kill -0 "$1" 2>/dev/null && return 1
+    [ -f "$player_log" ] || return 1
+    grep -qiE 'http error (4|5)[0-9][0-9]|failed to open|failed to recognize file format|cloudflare|forbidden' "$player_log"
+}
+
+retry_with_next_mirror() {
+    [ -n "$selected_site" ] && [ -n "$selected_source" ] || return 1
+    force_disable_source_mirror "$selected_site" "$selected_source" || return 1
+    printf "\033[1;33m%s\033[0m fallo al reproducir; probando otro servidor...\n" "${selected_origin:-$selected_source}" 1>&2
+    previous_episode="$episode"
+    unset episode
+    get_episode_url
+    # si vuelve el mismo enlace, el mirror no se descarto de verdad: no insistir
+    [ -n "$episode" ] && [ "$episode" != "$previous_episode" ]
+}
+
 play_episode() {
     manual_handoff=0
     player_pid=""
@@ -2464,8 +2509,19 @@ play_episode() {
             if [ "$manual_handoff" = 1 ]; then
                 :
             elif [ "$no_detach" = 0 ]; then
-                nohup $player_function $skip_flag --force-media-title="${media_title}Episode ${ep_no}" "$episode" $subs_flag $refr_flag $headers_flag >/dev/null 2>&1 &
-                player_pid=$!
+                player_attempt=0
+                while :; do
+                    mkdir -p "$(dirname "$player_log")" 2>/dev/null
+                    : >"$player_log"
+                    nohup $player_function $skip_flag --force-media-title="${media_title}Episode ${ep_no}" "$episode" $subs_flag $refr_flag $headers_flag >>"$player_log" 2>&1 &
+                    player_pid=$!
+                    player_died_on_startup "$player_pid" || break
+                    player_attempt=$((player_attempt + 1))
+                    [ "$player_attempt" -ge "$player_max_retries" ] &&
+                        die "El reproductor fallo con todos los servidores probados. Detalles en $player_log"
+                    retry_with_next_mirror ||
+                        die "No quedan servidores alternativos para este episodio. Detalles en $player_log"
+                done
             else
                 $player_function $skip_flag $subs_flag $refr_flag $headers_flag --force-media-title="${media_title}Episode ${ep_no}" "$episode"
                 mpv_exitcode=$?
@@ -2740,13 +2796,19 @@ jkanime_slug_key=""
 animeav1_refr="https://animeav1.com"
 animeav1_slug=""
 animeav1_slug_key=""
-update_url="${ANI_CLI_UPDATE_URL:-}"
+update_url="${ANI_CLI_UPDATE_URL:-https://raw.githubusercontent.com/KutexVT/ani-kutex/kutex/ani-kutex-core}"
 mode="${ANI_CLI_MODE:-sub}"
 download_dir="${ANI_CLI_DOWNLOAD_DIR:-$(default_download_dir)}"
 log_episode="${ANI_CLI_LOG:-1}"
 quality="${ANI_CLI_QUALITY:-best}"
 resolver_timeout="${ANI_CLI_RESOLVER_TIMEOUT:-15}"
 probe_timeout="${ANI_CLI_PROBE_TIMEOUT:-20}"
+show_stats=0
+# margen para decidir que el reproductor murio al arrancar en vez de haberlo
+# cerrado el usuario, y numero maximo de mirrors alternativos a intentar
+player_grace="${ANI_CLI_PLAYER_GRACE:-4}"
+player_max_retries="${ANI_CLI_PLAYER_RETRIES:-3}"
+player_log="${ANI_CLI_PLAYER_LOG:-${XDG_STATE_HOME:-$HOME/.local/state}/ani-kutex/player.log}"
 preferred_info_source="$(normalize_info_source "${ANI_CLI_INFO_SOURCE:-auto}")" || die "ANI_CLI_INFO_SOURCE invalido. Usa: auto, animeflv, jkanime, animeav1, anidb o animex"
 case "$(uname -a | cut -d " " -f 1,3-)" in
     *Darwin*) player_function="${ANI_CLI_PLAYER:-$(where_iina)}" ;;   # mac OS
@@ -2772,8 +2834,23 @@ fast_mode_mirror_file="$(mktemp)"
 continuous_state_file="$(mktemp)"
 current_episode_file="$(mktemp)"
 continuous_worker_pid=""
+print_stats() {
+    [ "${show_stats:-0}" = "1" ] || return 0
+    printf "\n\033[1;34m-- Servidores de esta sesion --\033[0m\n" 1>&2
+    if [ -n "${selected_origin:-}" ]; then
+        printf "  \033[1;32mReproducido con:\033[0m %s\n" "$selected_origin" 1>&2
+    fi
+    if [ -s "$fast_mode_mirror_file" ]; then
+        printf "  \033[1;31mDescartados:\033[0m %s\n" "$(tr '\n' ' ' <"$fast_mode_mirror_file")" 1>&2
+    else
+        printf "  \033[1;33mDescartados:\033[0m ninguno\n" 1>&2
+    fi
+    [ -s "$player_log" ] && printf "  Log del reproductor: %s\n" "$player_log" 1>&2
+}
+
 cleanup() {
     [ -n "${continuous_worker_pid:-}" ] && kill "$continuous_worker_pid" 2>/dev/null || true
+    print_stats
     rm -f "$fast_mode_mirror_file" "$continuous_state_file" "$current_episode_file"
 }
 trap cleanup EXIT
@@ -2807,6 +2884,12 @@ while [ $# -gt 0 ]; do
                     ;;
                 *) player_function="syncplay" ;;
             esac
+            ;;
+        --debug)
+            player_function="debug"
+            ;;
+        --stats)
+            show_stats=1
             ;;
         -q | --quality)
             [ $# -lt 2 ] && die "falta un argumento"
@@ -2998,7 +3081,7 @@ while cmd=$(playback_menu_options | nth "$(playback_menu_prompt) "); do
     start_continuous_worker_for_current_player
 done
 
-# ani-cli-mx fork
+# ani-kutex fork
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

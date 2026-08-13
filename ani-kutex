@@ -1,0 +1,18 @@
+#!/bin/sh
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ -x "$script_dir/ani-kutex-core" ]; then
+    target="$script_dir/ani-kutex-core"
+elif [ -x "$script_dir/../libexec/ani-kutex" ]; then
+    target="$script_dir/../libexec/ani-kutex"
+elif [ -x "/usr/lib/ani-kutex/ani-kutex-core" ]; then
+    target="/usr/lib/ani-kutex/ani-kutex-core"
+else
+    printf '%s\n' "No se encontro el script principal de ani-kutex." >&2
+    exit 1
+fi
+
+export ANI_CLI_NAME="ani-kutex"
+export ANI_CLI_LOG_TAG="ani-kutex"
+export ANI_CLI_STATE_NAME="ani-kutex"
+exec "$target" "$@"
