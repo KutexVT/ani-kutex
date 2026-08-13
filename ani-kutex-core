@@ -681,12 +681,22 @@ fetch_cover() {
 # se redibuja cada vez que te moves por la lista. Cada sitio guarda la sinopsis
 # en su propio hueco del HTML; AnimeAV1 ademas expone las pistas de audio.
 # formato del cache: linea 1 = pistas, linea 2 = sinopsis
+# WordPress devuelve los acentos escapados (ñ); se traducen los del
+# castellano para no arrastrar una dependencia solo por esto
+decode_json_escapes() {
+    sed 's|\\u00e1|á|g; s|\\u00e9|é|g; s|\\u00ed|í|g; s|\\u00f3|ó|g; s|\\u00fa|ú|g
+        s|\\u00c1|Á|g; s|\\u00c9|É|g; s|\\u00cd|Í|g; s|\\u00d3|Ó|g; s|\\u00da|Ú|g
+        s|\\u00f1|ñ|g; s|\\u00d1|Ñ|g; s|\\u00fc|ü|g; s|\\u00bf|¿|g; s|\\u00a1|¡|g
+        s|\\u201c|"|g; s|\\u201d|"|g; s|\\u2019|'"'"'|g; s|\\/|/|g; s|\\"|"|g'
+}
+
 preview_source_meta() {
     [ -n "$1" ] && [ -n "$2" ] || return 1
     meta_dir="$(ani_cache_dir)/meta"
     mkdir -p "$meta_dir" 2>/dev/null || return 1
     meta_file="${meta_dir}/${1}_$(printf '%s' "$2" | sed 's|[^A-Za-z0-9._-]|_|g')"
     if [ ! -f "$meta_file" ]; then
+        meta_page=""
         meta_tracks=""
         meta_synopsis=""
         case "$1" in
@@ -703,12 +713,22 @@ preview_source_meta() {
                 meta_page="$(curl -sL --connect-timeout 4 --max-time 8 -A "$agent" "${jkanime_refr}/${2}/" 2>/dev/null | tr '\n' ' ')"
                 meta_synopsis="$(printf '%s' "$meta_page" | grep -oE '<p class="scroll">[^<]+' | head -n 1 | sed 's|.*>||')"
                 ;;
+            animeflv)
+                meta_page="$(curl -sL --connect-timeout 4 --max-time 8 -A "$agent" "${animeflv_refr}/wp-json/wp/v2/categories?slug=${2}" 2>/dev/null | tr '\n' ' ')"
+                # el "description" de la categoria es la sinopsis; el de yoast_head_json
+                # es texto de SEO, por eso se ancla al campo que va tras "count"
+                meta_synopsis="$(printf '%s' "$meta_page" | grep -oE '"count":[0-9]+,"description":"[^"]*"' | head -n 1 |
+                    sed 's|.*"description":"||; s|"$||' | decode_json_escapes)"
+                ;;
         esac
-        # se crea aunque venga vacio, para no repetir la peticion en cada redibujo
-        {
-            printf '%s\n' "$meta_tracks"
-            printf '%s\n' "$meta_synopsis"
-        } >"$meta_file" 2>/dev/null
+        # solo se cachea si la peticion respondio: si fallo, conviene reintentar
+        # en el proximo redibujo en vez de dejar el hueco cacheado para siempre
+        if [ -n "$meta_page" ]; then
+            {
+                printf '%s\n' "$meta_tracks"
+                printf '%s\n' "$meta_synopsis"
+            } >"$meta_file" 2>/dev/null
+        fi
     fi
     [ -f "$meta_file" ] && cat "$meta_file"
 }
@@ -764,6 +784,10 @@ render_preview_entry() {
             # y el resto es para la portada
             img_rows=$((${FZF_PREVIEW_LINES:-24} - preview_text_rows))
             [ "$img_rows" -lt 3 ] && img_rows=3
+            # las portadas de AnimeAV1 son de ~230x330, asi que estirarlas a un
+            # panel alto las pixela: se les pone tope para que reduzcan en vez
+            # de ampliar y se vean nitidas
+            [ "$img_rows" -gt "$preview_image_max_rows" ] && img_rows="$preview_image_max_rows"
             # --scale-up es lo que hace que la imagen ocupe SIEMPRE las filas
             # reservadas: sin esto se dibuja a su tamano natural, ocupa menos de
             # las que se reservaron y el texto queda empujado fuera de la vista
@@ -3234,6 +3258,7 @@ probe_timeout="${ANI_CLI_PROBE_TIMEOUT:-20}"
 show_stats=0
 # filas que ocupa el texto del preview: titulo, fuente, pistas, el hueco y la bio
 preview_synopsis_rows="${ANI_CLI_PREVIEW_SYNOPSIS_LINES:-5}"
+preview_image_max_rows="${ANI_CLI_PREVIEW_IMAGE_ROWS:-14}"
 # 4 lineas fijas + la bio + 1 de colchon, por si el titulo se parte en dos
 preview_text_rows=$((5 + preview_synopsis_rows))
 preferred_lang="$(normalize_lang "${ANI_CLI_LANG:-}" 2>/dev/null || true)"
