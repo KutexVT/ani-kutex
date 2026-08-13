@@ -40,9 +40,10 @@ donde entra este fork:
 * **Reintento automático de servidor.** Si mpv se muere al arrancar *y* el log muestra un fallo de
   red (403, 404, Cloudflare), descarta ese servidor y prueba el siguiente, hasta 3 veces. Si fuiste
   vos quien cerró la ventana, no reintenta nada (para eso sirve el log).
-* **Preview con portada**, la fuente, y **las pistas reales** que tiene el título (LAT/ESP/SUB),
-  para que sepas qué vas a ver *antes* de elegirlo. Con puntuación, año y sinopsis de MyAnimeList
-  cuando la API está de humor.
+* **Preview con portada**, la fuente, **las pistas reales** que tiene el título (LAT/ESP/SUB) y una
+  **bio corta en español**, para que sepas qué vas a ver *antes* de elegirlo. Todo sale de una sola
+  petición a la fuente, y las portadas se van descargando de fondo mientras elegís: navegar por la
+  lista cuesta unos 70 ms en vez de segundo y medio.
 * **`--lang lat|esp|sub|dub`** para forzar el idioma en vez de rezarle al orden interno. Si la pista
   no existe te lo dice en la cara en lugar de ponerte otra cosa a traición.
 * **Historial decente**: progreso `12/24`, lo último visto arriba, y `--forget` para borrar una sola
@@ -118,9 +119,19 @@ ani --debug "one piece"    # muestra los enlaces en vez de reproducir
 ani --stats "one piece"    # qué servidor funcionó y cuáles se descartaron
 ```
 
-**Variables** por si querés trastear: `ANI_CLI_LANG`, `ANI_CLI_FZF_OPTS`,
-`ANI_CLI_PREVIEW_IMAGES=0`, `ANI_CLI_NOTIFY=0`, `ANI_CLI_MAL=0`,
-`ANI_CLI_PLAYER_RETRIES`, `ANI_CLI_PLAYER_GRACE`, `ANI_CLI_PLAYER_LOG`.
+**Variables** por si querés trastear:
+
+| Variable | Para qué |
+|---|---|
+| `ANI_CLI_LANG` | Idioma por defecto (`lat`, `esp`, `sub`, `dub`) |
+| `ANI_CLI_FZF_OPTS` | Cambiar el tema del selector a tu gusto |
+| `ANI_CLI_PREVIEW_IMAGES=0` | Preview sin portadas, solo texto |
+| `ANI_CLI_PREVIEW_SYNOPSIS_LINES` | Cuántas líneas de bio mostrar (5 por defecto) |
+| `ANI_CLI_PREFETCH=0` | No precargar portadas de fondo |
+| `ANI_CLI_PREFETCH_LIMIT` | Cuántos resultados precargar (12 por defecto) |
+| `ANI_CLI_MAL=1` | Sumar puntuación y año de MyAnimeList (una petición más) |
+| `ANI_CLI_NOTIFY=0` | Sin notificaciones |
+| `ANI_CLI_PLAYER_RETRIES` / `ANI_CLI_PLAYER_GRACE` / `ANI_CLI_PLAYER_LOG` | Ajustes del reintento de servidor |
 
 ---
 
