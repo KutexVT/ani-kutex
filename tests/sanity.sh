@@ -5,9 +5,9 @@ repo_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$repo_dir"
 
 run_syntax_checks() {
-    sh -n ani-cli-mx-core
+    sh -n ani-kutex-core
     if command -v zsh >/dev/null 2>&1; then
-        zsh -n ani-cli-mx-core
+        zsh -n ani-kutex-core
     fi
 }
 
@@ -38,7 +38,7 @@ run_debug_smoke() {
         provider="${provider_case%%:*}"
         provider_label="${provider_case#*:}"
         timeout 120 env ANI_CLI_PLAYER=debug ANI_CLI_NO_DETACH=1 ANI_CLI_FAST_MODE=0 \
-            ANI_CLI_PROBE_TIMEOUT=20 ANI_CLI_ANIDB_CURL="$anidb_curl" ./ani-cli-mx \
+            ANI_CLI_PROBE_TIMEOUT=20 ANI_CLI_ANIDB_CURL="$anidb_curl" ./ani-kutex \
             --source "$provider" -S 1 -e 1 "one piece" >"$output_file" 2>&1 || {
             strip_ansi <"$output_file" >&2
             return 1
@@ -56,7 +56,7 @@ run_continuous_toggle_smoke() {
     tmp_dir="$(mktemp -d)"
     funcs_file="$tmp_dir/continuous-functions.sh"
     played_file="$tmp_dir/played"
-    sed -n '/^set_current_episode()/,/^toggle_close_previous_from_menu()/p' ani-cli-mx-core | sed '$d' >"$funcs_file"
+    sed -n '/^set_current_episode()/,/^toggle_close_previous_from_menu()/p' ani-kutex-core | sed '$d' >"$funcs_file"
 
     (
         # shellcheck disable=SC1090
@@ -91,12 +91,12 @@ run_continuous_toggle_smoke() {
 }
 
 run_download_menu_smoke() {
-    menu_options="$(sed -n '/^playback_menu_options()/,/^playback_menu_prompt()/p' ani-cli-mx-core)"
+    menu_options="$(sed -n '/^playback_menu_options()/,/^playback_menu_prompt()/p' ani-kutex-core)"
     printf '%s\n' "$menu_options" | grep -q 'descargar_episodio_actual'
     ! printf '%s\n' "$menu_options" | grep -q 'cambiar_calidad'
-    ! grep -q '^[[:space:]]*cambiar_calidad)' ani-cli-mx-core
-    grep -q 'download_dir="${ANI_CLI_DOWNLOAD_DIR:-$(default_download_dir)}"' ani-cli-mx-core
-    grep -q "command -v yt-dlp" ani-cli-mx-core
+    ! grep -q '^[[:space:]]*cambiar_calidad)' ani-kutex-core
+    grep -q 'download_dir="${ANI_CLI_DOWNLOAD_DIR:-$(default_download_dir)}"' ani-kutex-core
+    grep -q "command -v yt-dlp" ani-kutex-core
 }
 
 run_windows_compat_smoke() {
@@ -112,21 +112,21 @@ run_windows_compat_smoke() {
     cp /dev/null "$tmp_dir/bin/powershell.exe"
     chmod +x "$tmp_dir/bin/powershell.exe"
     printf '%s\n' '#!/bin/sh' 'printf "%s\n" "$*" >"$POWERSHELL_ARGS_FILE"' >"$tmp_dir/bin/powershell.exe"
-    version_output="$(env ANI_CLI_WINDOWS=1 ANI_CLI_NAME=ani-cli-mx \
-        ANI_CLI_STATE_NAME=ani-cli-mx LOCALAPPDATA="$local_app_data_env" \
-        ANI_CLI_PLAYER=debug ./ani-cli-mx-core -V)"
+    version_output="$(env ANI_CLI_WINDOWS=1 ANI_CLI_NAME=ani-kutex \
+        ANI_CLI_STATE_NAME=ani-kutex LOCALAPPDATA="$local_app_data_env" \
+        ANI_CLI_PLAYER=debug ./ani-kutex-core -V)"
 
     [ "$version_output" = "1.4.0" ]
-    [ -f "$local_app_data/ani-cli-mx/ani-hsts" ]
-    grep -q 'GIT_INSTALL_ROOT' ani-cli-mx.cmd
-    grep -q 'ANI_CLI_PACKAGE_MANAGER=scoop' ani-cli-mx.cmd
-    grep -q 'ANI_CLI_STATE_NAME=ani-cli-mx' ani-cli-mx.cmd
-    ! grep -qi 'System32.*bash.exe' ani-cli-mx.cmd
+    [ -f "$local_app_data/ani-kutex/ani-hsts" ]
+    grep -q 'GIT_INSTALL_ROOT' ani-kutex.cmd
+    grep -q 'ANI_CLI_PACKAGE_MANAGER=scoop' ani-kutex.cmd
+    grep -q 'ANI_CLI_STATE_NAME=ani-kutex' ani-kutex.cmd
+    ! grep -qi 'System32.*bash.exe' ani-kutex.cmd
 
     env PATH="$tmp_dir/bin:$PATH" ANI_CLI_WINDOWS=1 ANI_CLI_PACKAGE_MANAGER=scoop \
-        ANI_CLI_STATE_NAME=ani-cli-mx LOCALAPPDATA="$local_app_data_env" ANI_CLI_PLAYER=debug \
-        POWERSHELL_ARGS_FILE="$powershell_args_file" ./ani-cli-mx-core -U
-    grep -q 'scoop update ani-cli-mx' "$powershell_args_file"
+        ANI_CLI_STATE_NAME=ani-kutex LOCALAPPDATA="$local_app_data_env" ANI_CLI_PLAYER=debug \
+        POWERSHELL_ARGS_FILE="$powershell_args_file" ./ani-kutex-core -U
+    grep -q 'scoop update ani-kutex' "$powershell_args_file"
 
     rm -rf "$tmp_dir"
 }
@@ -135,7 +135,7 @@ run_search_diagnostic_smoke() {
     tmp_dir="$(mktemp -d)"
     output_file="$tmp_dir/output"
     funcs_file="$tmp_dir/search-diagnostic-functions.sh"
-    sed -n '/^probe_search_endpoint()/,/^extract_with_ytdlp()/p' ani-cli-mx-core | sed '$d' >"$funcs_file"
+    sed -n '/^probe_search_endpoint()/,/^extract_with_ytdlp()/p' ani-kutex-core | sed '$d' >"$funcs_file"
 
     if (
         # shellcheck disable=SC1090
@@ -175,7 +175,7 @@ run_search_diagnostic_smoke() {
 run_search_query_candidates_smoke() {
     tmp_dir="$(mktemp -d)"
     funcs_file="$tmp_dir/search-query-functions.sh"
-    sed -n '/^normalize_romanized_text()/,/^normalize_match_key()/p' ani-cli-mx-core | sed '$d' >"$funcs_file"
+    sed -n '/^normalize_romanized_text()/,/^normalize_match_key()/p' ani-kutex-core | sed '$d' >"$funcs_file"
 
     (
         # shellcheck disable=SC1090
@@ -207,7 +207,7 @@ run_language_sections_smoke() {
 run_anidb_provider_smoke() {
     tmp_dir="$(mktemp -d)"
     funcs_file="$tmp_dir/anidb-functions.sh"
-    sed -n '/^find_anidb_curl_exe()/,/^pick_animeflv_language()/p' ani-cli-mx-core | sed '$d' >"$funcs_file"
+    sed -n '/^find_anidb_curl_exe()/,/^pick_animeflv_language()/p' ani-kutex-core | sed '$d' >"$funcs_file"
 
     (
         # shellcheck disable=SC1090
@@ -263,7 +263,7 @@ run_anidb_provider_smoke() {
 run_fast_link_selection_smoke() {
     tmp_dir="$(mktemp -d)"
     funcs_file="$tmp_dir/link-functions.sh"
-    sed -n '/^link_is_probably_broken()/,/^extract_streamtape_link()/p' ani-cli-mx-core | sed '$d' >"$funcs_file"
+    sed -n '/^link_is_probably_broken()/,/^extract_streamtape_link()/p' ani-kutex-core | sed '$d' >"$funcs_file"
 
     (
         # shellcheck disable=SC1090

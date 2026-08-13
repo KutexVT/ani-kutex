@@ -1,0 +1,57 @@
+#compdef ani-kutex ani
+
+# Completado de zsh para ani-kutex.
+# Instalar en un directorio del fpath, por ejemplo:
+#   mkdir -p ~/.local/share/zsh/site-functions
+#   cp completions/_ani-kutex ~/.local/share/zsh/site-functions/
+# y asegurarse de tener esa ruta en fpath antes de compinit.
+
+_ani_kutex_history_titles() {
+    local hist_file="${ANI_CLI_HIST_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/ani-kutex}/ani-hsts"
+    [[ -r $hist_file ]] || return 1
+    local -a titles
+    # el historial es: episodio \t sitio:id \t titulo
+    titles=( ${(f)"$(cut -f3 -- $hist_file 2>/dev/null)"} )
+    (( ${#titles} )) || return 1
+    _describe -t history 'del historial' titles
+}
+
+_ani-kutex() {
+    local -a opts
+    opts=(
+        '(-c --continue)'{-c,--continue}'[Continuar desde el historial]'
+        '(-d --download)'{-d,--download}'[Descargar en vez de reproducir]'
+        '(-D --delete)'{-D,--delete}'[Borrar el historial entero]'
+        '--forget[Quitar una serie del historial]'
+        '(-l --logview)'{-l,--logview}'[Ver los logs]'
+        '(-s --syncplay)'{-s,--syncplay}'[Ver con amigos usando Syncplay]'
+        '(-S --select-nth)'{-S,--select-nth}'[Elegir el resultado n]:posicion:'
+        '(-f --fast --fast-mode)'{-f,--fast,--fast-mode}'[Modo rapido (por defecto)]'
+        '(--slow --classic --no-fast)'{--slow,--classic,--no-fast}'[Buscar fuente en cada episodio]'
+        '(--continuous --auto-next)'{--continuous,--auto-next}'[Pasar solo al siguiente episodio]'
+        '--close-previous[Cerrar el reproductor anterior]'
+        '(-q --quality)'{-q,--quality}'[Calidad del video]:calidad:(best worst 1080 720 480 360)'
+        '--lang[Idioma de la pista]:idioma:((lat\:latino esp\:castellano sub\:subtitulado dub\:doblado))'
+        '--source[Fuente a usar]:fuente:(auto jkanime animeav1 animeflv anidb animex)'
+        '--dub[Reproducir doblado si existe]'
+        '--debug[Mostrar los enlaces en vez de reproducir]'
+        '--stats[Resumen de servidores al salir]'
+        '--no-notify[No mandar notificacion al empezar]'
+        '(-e --episode -r --range)'{-e,--episode,-r,--range}'[Episodio o rango]:episodio:'
+        '(-v --vlc)'{-v,--vlc}'[Usar VLC]'
+        '--rofi[Usar rofi como menu]'
+        '--dmenu[Usar dmenu como menu]'
+        '--skip[Saltar el opening con ani-skip]'
+        '--skip-title[Titulo para ani-skip]:titulo:'
+        '--no-detach[No soltar el reproductor en segundo plano]'
+        '--exit-after-play[Salir al terminar el episodio]'
+        '(-N --nextep-countdown)'{-N,--nextep-countdown}'[Cuenta atras del proximo episodio]'
+        '(-U --update)'{-U,--update}'[Actualizar el script]'
+        '(-V --version)'{-V,--version}'[Version]'
+        '(-h --help)'{-h,--help}'[Ayuda]'
+        '*:anime:_ani_kutex_history_titles'
+    )
+    _arguments -s -S $opts
+}
+
+_ani-kutex "$@"

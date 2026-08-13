@@ -21,8 +21,25 @@ that probe and *then* fails during real playback. This fork closes that gap:
   through `ANI_CLI_PLAYER=debug`; passing `--debug` leaked it into the search query instead.
 - **`--stats`** prints which server played and which mirrors were discarded, on exit.
 
+### Interface
+
+- **Preview panel with cover art.** The series selector shows the cover (rendered with `kitten icat`
+  in kitty), the source, and the actual audio tracks the title has — so you can tell whether it has
+  LAT/ESP/SUB *before* picking it. Enriched with score, year and synopsis from MyAnimeList when
+  available. Falls back to text, and then to a plain list, without ever breaking the flow.
+- **Themed selector**, colored to match the terminal instead of raw `fzf`. Language and source tags
+  are colored; the index deliberately is not, because the selection is recovered by parsing it.
+- **`--lang lat|esp|sub|dub`** to force an audio track instead of relying on the built-in order.
+  Asking for a dubbed track implies `--dub`. When the track does not exist, it says so
+  (`No hay pista ESP en AnimeAV1; usando SUB`) instead of silently playing something else.
+- **Desktop notification** when an episode starts, with the cover as the icon (`--no-notify` to skip).
+- **Better history**: `12/24` progress, most recently watched first, and `--forget` to drop a single
+  series instead of wiping everything.
+- **zsh completion** in `completions/_ani-kutex`, including titles from your history.
+
 Tunables: `ANI_CLI_PLAYER_GRACE` (seconds to wait before deciding the player died, default 4),
-`ANI_CLI_PLAYER_RETRIES` (default 3), `ANI_CLI_PLAYER_LOG` (log path).
+`ANI_CLI_PLAYER_RETRIES` (default 3), `ANI_CLI_PLAYER_LOG` (log path), `ANI_CLI_LANG`,
+`ANI_CLI_FZF_OPTS`, `ANI_CLI_PREVIEW_IMAGES=0`, `ANI_CLI_NOTIFY=0`, `ANI_CLI_MAL=0`.
 
 This is an independent community project. It is not affiliated with, maintained by, or endorsed by any other project or team.
 

@@ -12,19 +12,19 @@ if not defined BASH_EXE if exist "%ProgramFiles%\Git\bin\bash.exe" set "BASH_EXE
 if not defined BASH_EXE if exist "%LocalAppData%\Programs\Git\bin\bash.exe" set "BASH_EXE=%LocalAppData%\Programs\Git\bin\bash.exe"
 
 if not defined BASH_EXE (
-    >&2 echo ani-cli-mx necesita Git for Windows. Instalalo con: scoop install git
+    >&2 echo ani-kutex necesita Git for Windows. Instalalo con: scoop install git
     exit /b 1
 )
 
-if not exist "%~dp0ani-cli-mx-core" (
-    >&2 echo No se encontro ani-cli-mx-core junto al launcher de Windows.
+if not exist "%~dp0ani-kutex-core" (
+    >&2 echo No se encontro ani-kutex-core junto al launcher de Windows.
     exit /b 1
 )
 
 set "ANI_CLI_WINDOWS=1"
 set "ANI_CLI_PACKAGE_MANAGER=scoop"
-set "ANI_CLI_NAME=ani-cli-mx"
-set "ANI_CLI_LOG_TAG=ani-cli-mx"
-set "ANI_CLI_STATE_NAME=ani-cli-mx"
-"%BASH_EXE%" "%~dp0ani-cli-mx-core" %*
+set "ANI_CLI_NAME=ani-kutex"
+set "ANI_CLI_LOG_TAG=ani-kutex"
+set "ANI_CLI_STATE_NAME=ani-kutex"
+"%BASH_EXE%" "%~dp0ani-kutex-core" %*
 exit /b %ERRORLEVEL%
