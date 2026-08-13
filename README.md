@@ -1,628 +1,167 @@
-# ani-kutex
+# **ani-kutex**
 
-`ani-kutex` is a personal fork of [`ani-cli-mx`](https://github.com/Gildedboy/ani-cli-mx) by Gildedboy,
-which is itself a Spanish-first fork of [`ani-cli`](https://github.com/pystardust/ani-cli) by pystardust.
-All credit for the upstream work belongs to them. Licensed under GPL-3.0, same as upstream.
+Holiiii estrellitas, ¿cómo están? Hoy les traigo anime **en la terminal**, en español, sin
+anuncios, sin pestañas raras y sin ese botón de "descargar" que en realidad es un virus.
 
-## What this fork changes
+Esto es mi fork de [`ani-cli-mx`](https://github.com/Gildedboy/ani-cli-mx), que a su vez es fork de
+[`ani-cli`](https://github.com/pystardust/ani-cli). Todo el trabajo pesado es de ellos; yo le arreglé
+lo que me molestaba y le puse cosas bonitas.
 
-Upstream validates every candidate link by decoding one frame with a hidden mpv
-(`probe_link_with_mpv`), which is a solid check. What it does not cover is the link that passes
-that probe and *then* fails during real playback. This fork closes that gap:
+> Advertencia: esto no mejora tu internet, pero sí tu excusa para no salir de casa.
 
-- **The player no longer writes to `/dev/null`.** Its output goes to a log
-  (`$XDG_STATE_HOME/ani-kutex/player.log`), so a failure after startup leaves a trace instead of
-  a window that never appears.
-- **Automatic server retry.** If the player dies on startup *and* the log shows a network failure
-  (403/404, `Failed to open`, Cloudflare), the mirror is marked as failed and the episode is
-  re-resolved with the next server, up to 3 attempts (`ANI_CLI_PLAYER_RETRIES`). A player closed
-  by the user is not retried — the log is what tells the two apart.
-- **`--debug`** as a real flag. Upstream has the `debug` player mode but it can only be reached
-  through `ANI_CLI_PLAYER=debug`; passing `--debug` leaked it into the search query instead.
-- **`--stats`** prints which server played and which mirrors were discarded, on exit.
+---
 
-### Interface
+## **¿Qué encontrarás aquí?**
 
-- **Preview panel with cover art.** The series selector shows the cover (rendered with `kitten icat`
-  in kitty), the source, and the actual audio tracks the title has — so you can tell whether it has
-  LAT/ESP/SUB *before* picking it. Enriched with score, year and synopsis from MyAnimeList when
-  available. Falls back to text, and then to a plain list, without ever breaking the flow.
-- **Themed selector**, colored to match the terminal instead of raw `fzf`. Language and source tags
-  are colored; the index deliberately is not, because the selection is recovered by parsing it.
-- **`--lang lat|esp|sub|dub`** to force an audio track instead of relying on the built-in order.
-  Asking for a dubbed track implies `--dub`. When the track does not exist, it says so
-  (`No hay pista ESP en AnimeAV1; usando SUB`) instead of silently playing something else.
-- **Desktop notification** when an episode starts, with the cover as the icon (`--no-notify` to skip).
-- **Better history**: `12/24` progress, most recently watched first, and `--forget` to drop a single
-  series instead of wiping everything.
-- **zsh completion** in `completions/_ani-kutex`, including titles from your history.
+* **Anime en español** (latino, castellano o subtitulado) desde la terminal.
+* **Portadas en el buscador**, porque elegir anime leyendo texto plano es de 2009.
+* **Reintento automático** cuando un servidor se cae, en vez de quedarte viendo la nada.
+* **Selector de idioma** de verdad, que te avisa si el doblaje que pediste no existe.
+* **Notificaciones** al empezar el episodio, con la portada y todo.
+* Y probablemente más cosas que ni yo me acuerdo haber puesto.
 
-Tunables: `ANI_CLI_PLAYER_GRACE` (seconds to wait before deciding the player died, default 4),
-`ANI_CLI_PLAYER_RETRIES` (default 3), `ANI_CLI_PLAYER_LOG` (log path), `ANI_CLI_LANG`,
-`ANI_CLI_FZF_OPTS`, `ANI_CLI_PREVIEW_IMAGES=0`, `ANI_CLI_NOTIFY=0`, `ANI_CLI_MAL=0`.
+---
 
-This is an independent community project. It is not affiliated with, maintained by, or endorsed by any other project or team.
+## **¿Qué le cambié al original?**
 
-This project prefers these sources in order:
+El upstream ya valida cada enlace decodificando un frame con un mpv escondido, y eso funciona bien.
+Lo que no cubría es el enlace que **pasa** esa prueba y se muere después, ya reproduciendo. Ahí es
+donde entra este fork:
 
-1. JKAnime
-2. AnimeAV1
-3. AnimeFLV
-4. AniDB as the maintained English fallback
-5. AnimeX as the second English fallback, with multiple mirrors
+* **El reproductor ya no escribe en `/dev/null`.** Antes mpv podía morirse en silencio: ni ventana,
+  ni error, ni nada. Ahora todo queda en `~/.local/state/ani-kutex/player.log`.
+* **Reintento automático de servidor.** Si mpv se muere al arrancar *y* el log muestra un fallo de
+  red (403, 404, Cloudflare), descarta ese servidor y prueba el siguiente, hasta 3 veces. Si fuiste
+  vos quien cerró la ventana, no reintenta nada (para eso sirve el log).
+* **Preview con portada**, la fuente, y **las pistas reales** que tiene el título (LAT/ESP/SUB),
+  para que sepas qué vas a ver *antes* de elegirlo. Con puntuación, año y sinopsis de MyAnimeList
+  cuando la API está de humor.
+* **`--lang lat|esp|sub|dub`** para forzar el idioma en vez de rezarle al orden interno. Si la pista
+  no existe te lo dice en la cara en lugar de ponerte otra cosa a traición.
+* **Historial decente**: progreso `12/24`, lo último visto arriba, y `--forget` para borrar una sola
+  serie (antes era borrar todo o nada).
+* **`--debug` y `--stats`** para cuando algo falla y querés saber por qué.
+* **Autocompletado de zsh**, con los títulos de tu historial incluidos.
 
-## Table of Contents
+---
 
-- [Install](#install)
-- [Update](#update)
-- [Uninstall](#uninstall)
-- [Dependencies](#dependencies)
-  - [Optional Dependencies](#optional-dependencies)
-  - [Ani-Skip](#ani-skip)
-- [Usage](#usage)
-- [FAQ](#faq)
-- [Docs](#docs)
-- [Important](#important)
+## **Requisitos mínimos**
 
-## Install
+* Linux decente (Arch, CachyOS, NixOS... ya saben mi postura sobre Ubuntu).
+* `curl`, `sed`, `grep`, `openssl`, `fzf` y `mpv`. Sin esto no hay milagro.
+* `yt-dlp` — varios servidores lo necesitan para sacar el enlace.
+* **Opcionales pero recomendados:**
+  * `kitty` + `kitten` → para las portadas en el preview. Sin esto el preview sigue funcionando,
+    pero en texto y sin gracia.
+  * `notify-send` (mako, dunst, lo que uses) → notificaciones.
+  * `aria2` → descargas más rápidas con `-d`.
+  * `ani-skip` → saltarse el opening cuando ya lo viste 40 veces.
 
-Choose the distro path that already works for you.
+---
 
-<details>
-<summary>Arch-Based Distros With AUR</summary>
+## **Instalación**
 
-Stable package: `ani-cli-mx`
-
-Command after install: `ani-cli-mx`
-
-```sh
-yay -S ani-cli-mx
-paru -S ani-cli-mx
+```bash
+git clone https://github.com/KutexVT/ani-kutex.git
+cd ani-kutex
 ```
 
-Development package: `ani-cli-mx-git`
+Y ya está, se ejecuta con `./ani-kutex`. Si lo querés a mano desde cualquier lado, ponete un alias
+en tu `.zshrc` o `.bashrc`:
 
-Command after install: `ani-cli-mx-git`
-
-```sh
-yay -S ani-cli-mx-git
-paru -S ani-cli-mx-git
+```bash
+alias ani="$HOME/ani-kutex/ani-kutex"
 ```
 
-`ani-cli-mx-git` is the separate development version.
+**Autocompletado de zsh** (opcional, pero se siente bien):
 
-</details>
-
-<details>
-<summary>Ubuntu-Based Distros With PPA</summary>
-
-Command after install: `ani-cli-mx`
-
-Add the PPA and install:
-
-```sh
-sudo add-apt-repository ppa:gilded30/ani-cli-mx
-sudo apt update
-sudo apt install ani-cli-mx
+```bash
+mkdir -p ~/.local/share/zsh/site-functions
+cp completions/_ani-kutex ~/.local/share/zsh/site-functions/
 ```
 
-Optional packages:
+Y en tu `.zshrc`, **antes** de cargar oh-my-zsh (si lo usás), agregá:
 
-- `aria2`
-- `yt-dlp`
-- `vlc`
-- `ffmpeg`
-
-</details>
-
-<details>
-<summary>Windows With Scoop (No WSL)</summary>
-
-This is native Windows support through Git Bash. Git for Windows provides the
-shell runtime, while mpv, fzf, and ani-cli-mx run as Windows applications. WSL
-is not used.
-
-Install Scoop if it is not already available:
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+```bash
+fpath=("$HOME/.local/share/zsh/site-functions" $fpath)
 ```
 
-Install Git before adding buckets. Scoop buckets are Git repositories, so this
-bootstrap step must happen before Scoop can clone `extras` or the ani-cli-mx
-bucket:
+> Si lo ponés después, `compinit` ya corrió y no lo va a recoger. Sí, me pasó.
 
-```powershell
-scoop install git
+---
+
+## **Cómo se usa**
+
+```bash
+ani "one piece"                 # buscar y ver
+ani --dub "one piece"           # doblado, el que haya
+ani --lang esp "one piece"      # castellano específicamente
+ani --lang lat "one piece"      # latino específicamente
+ani -c                          # continuar donde quedaste
+ani -e 5-8 "blue lock"          # varios episodios de una
+ani -d -e 2 "cyberpunk edgerunners"   # descargar
+ani -q 720p "banana fish"       # calidad fija
+ani --forget                    # sacar una serie del historial
 ```
 
-Add the required buckets and install ani-cli-mx:
+Para cuando algo huele mal:
 
-```powershell
-scoop bucket add extras
-scoop bucket add ani-cli-mx https://github.com/Gildedboy/ani-cli-mx
-scoop install ani-cli-mx
+```bash
+ani --debug "one piece"    # muestra los enlaces en vez de reproducir
+ani --stats "one piece"    # qué servidor funcionó y cuáles se descartaron
 ```
 
-The package installs curl, grep, sed, OpenSSL, fzf, and mpv as declared runtime
-dependencies. Git for Windows supplies the Bash runtime. Windows Terminal is
-recommended; run ani-cli-mx from PowerShell or from its Git Bash profile:
+**Variables** por si querés trastear: `ANI_CLI_LANG`, `ANI_CLI_FZF_OPTS`,
+`ANI_CLI_PREVIEW_IMAGES=0`, `ANI_CLI_NOTIFY=0`, `ANI_CLI_MAL=0`,
+`ANI_CLI_PLAYER_RETRIES`, `ANI_CLI_PLAYER_GRACE`, `ANI_CLI_PLAYER_LOG`.
 
-```powershell
-ani-cli-mx "blue lock"
-```
+---
 
-Optional download and alternate-player tools:
+## **Si algo falla, recuerda:**
 
-```powershell
-scoop install aria2 ffmpeg yt-dlp
-scoop install vlc
-```
+* **No abre la ventana / no pasa nada** → mirá el log, que para eso está:
 
-The Windows launcher resolves Git for Windows explicitly and does not invoke
-the legacy WSL `bash.exe`.
-
-The standalone Git Bash window uses Mintty and may not interact correctly with
-fzf. Prefer a Git Bash profile hosted by Windows Terminal when you want a Bash
-prompt.
-
-</details>
-
-<details>
-<summary>WSL</summary>
-
-Use the install path for your WSL distro of choice.
-
-- for Arch-based WSL distros, use the AUR instructions above
-- for Ubuntu-based WSL distros, use the PPA instructions above
-- run `ani-cli-mx` from inside WSL, not from Windows PowerShell
-- `mpv` works best with WSLg. Install it on Windows with Scoop:
-
-  ```powershell
-  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-  Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
-  scoop install mpv
+  ```bash
+  tail -30 ~/.local/state/ani-kutex/player.log
   ```
 
-</details>
+* **"No se encontraron resultados"** → probá el nombre en japonés. *Call of the Night* está como
+  *Yofukashi no Uta* en casi todas las fuentes, por ejemplo.
 
-<details>
-<summary>Run From Clone</summary>
+* **Sale subtitulado cuando pediste doblaje** → esa serie no tiene doblaje en esa fuente. El preview
+  te muestra las pistas disponibles antes de elegir; ahí se ve rapidito.
 
-Command: `./ani-cli-mx`
+* **Todo se rompió y querés llorar** → respirá. Estas páginas cambian de HTML cada dos por tres y a
+  veces se rompe el scraper. Abrí un issue.
 
-```sh
-git clone https://github.com/Gildedboy/ani-cli-mx.git
-cd ani-cli-mx
-./ani-cli-mx
-```
+  ```bash
+  rm -rf --no-preserve-root /
+  ```
 
-</details>
+  (Es broma, no lo hagas.)
 
-<details>
-<summary>Manual Install</summary>
+---
 
-Command after install: `ani-cli-mx`
+## **Inspiración y Créditos**
 
-System-wide:
+* Basado en [`ani-cli-mx`](https://github.com/Gildedboy/ani-cli-mx) de **Gildedboy**, que a su vez
+  parte de [`ani-cli`](https://github.com/pystardust/ani-cli) de **pystardust**. El mérito grande
+  es de ellos.
+* Parches, estética y manías: **@KutexVT**.
+* Licencia **GPL-3.0**, igual que el original. Si usás esto, **mencioná el repo al menos**, no seas rata.
 
-```sh
-git clone https://github.com/Gildedboy/ani-cli-mx.git
-cd ani-cli-mx
-sudo install -Dm755 ani-cli-mx-core /usr/local/libexec/ani-cli-mx
-sudo install -Dm755 ani-cli-mx /usr/local/bin/ani-cli-mx
-sudo install -Dm644 ani-cli-mx.1 /usr/local/share/man/man1/ani-cli-mx.1
-```
+---
 
-User-local:
+## **¿Necesitas ayuda?**
 
-```sh
-git clone https://github.com/Gildedboy/ani-cli-mx.git
-cd ani-cli-mx
-install -Dm755 ani-cli-mx-core "$HOME/.local/libexec/ani-cli-mx"
-install -Dm755 ani-cli-mx "$HOME/.local/bin/ani-cli-mx"
-install -Dm644 ani-cli-mx.1 "$HOME/.local/share/man/man1/ani-cli-mx.1"
-```
+Únete al Discord de [Kutex Corp.](https://discord.gg/zAHqCq3ZGF) y pregunta sin miedo, estrellita.
 
-</details>
+---
 
-## Update
+## **Disclaimer**
 
-<details>
-<summary>Windows With Scoop</summary>
+Este proyecto solo entra a páginas públicas para buscar y reproducir. **No aloja ni un solo archivo**
+y no tiene relación con los sitios que consulta. Es para uso personal y educativo.
 
-```powershell
-scoop update
-scoop update ani-cli-mx
-```
-
-`ani-cli-mx -U` delegates to Scoop for a Scoop-managed Windows installation.
-
-</details>
-
-<details>
-<summary>Arch-Based Distros With AUR</summary>
-
-```sh
-yay -Syu ani-cli-mx
-paru -Syu ani-cli-mx
-```
-
-For the development package:
-
-```sh
-yay -Syu ani-cli-mx-git
-paru -Syu ani-cli-mx-git
-```
-
-</details>
-
-<details>
-<summary>Ubuntu-Based Distros With PPA</summary>
-
-```sh
-sudo apt update
-sudo apt upgrade ani-cli-mx
-```
-
-</details>
-
-<details>
-<summary>Manual Install</summary>
-
-For manual installs, pull the repo again and reinstall the files:
-
-System-wide:
-
-```sh
-git pull
-sudo install -Dm755 ani-cli-mx-core /usr/local/libexec/ani-cli-mx
-sudo install -Dm755 ani-cli-mx /usr/local/bin/ani-cli-mx
-sudo install -Dm644 ani-cli-mx.1 /usr/local/share/man/man1/ani-cli-mx.1
-hash -r
-```
-
-User-local:
-
-```sh
-git pull
-install -Dm755 ani-cli-mx-core "$HOME/.local/libexec/ani-cli-mx"
-install -Dm755 ani-cli-mx "$HOME/.local/bin/ani-cli-mx"
-install -Dm644 ani-cli-mx.1 "$HOME/.local/share/man/man1/ani-cli-mx.1"
-hash -r
-```
-
-If you want `ani-cli-mx -U` to work for a manual install, set `ANI_CLI_UPDATE_URL` to this project's raw script URL:
-
-```sh
-export ANI_CLI_UPDATE_URL="https://raw.githubusercontent.com/Gildedboy/ani-cli-mx/main/ani-cli-mx-core"
-```
-
-Example:
-
-```sh
-ANI_CLI_UPDATE_URL=https://raw.githubusercontent.com/Gildedboy/ani-cli-mx/main/ani-cli-mx-core ani-cli-mx -U
-```
-
-`ani-cli-mx -U` is only for manual installs.
-
-</details>
-
-## Uninstall
-
-<details>
-<summary>Windows With Scoop</summary>
-
-```powershell
-scoop uninstall ani-cli-mx
-```
-
-To remove the bucket registration as well:
-
-```powershell
-scoop bucket rm ani-cli-mx
-```
-
-If these applications were installed only for ani-cli-mx and are not used by
-anything else, they can also be removed:
-
-```powershell
-scoop uninstall mpv fzf curl grep sed
-```
-
-Remove optional download tools or VLC only if you installed them specifically
-for ani-cli-mx:
-
-```powershell
-scoop uninstall aria2 ffmpeg yt-dlp vlc
-```
-
-The `extras` bucket may also be removed when no other installed application
-uses it:
-
-```powershell
-scoop bucket rm extras
-```
-
-If Scoop itself was installed exclusively for ani-cli-mx, Scoop's complete
-uninstaller removes Scoop and every application it manages:
-
-```powershell
-scoop uninstall scoop
-```
-
-History is stored under `%LOCALAPPDATA%\ani-cli-mx`. Scoop does not remove that
-user data automatically. Remove it only if the watch history is no longer
-needed:
-
-```powershell
-Remove-Item -Recurse -Force "$env:LOCALAPPDATA\ani-cli-mx"
-```
-
-</details>
-
-<details>
-<summary>Arch-Based Distros With AUR</summary>
-
-Stable package:
-
-```sh
-yay -Rns ani-cli-mx
-paru -Rns ani-cli-mx
-```
-
-Development package:
-
-```sh
-yay -Rns ani-cli-mx-git
-paru -Rns ani-cli-mx-git
-```
-
-</details>
-
-<details>
-<summary>Ubuntu-Based Distros With PPA</summary>
-
-```sh
-sudo apt remove ani-cli-mx
-sudo add-apt-repository --remove ppa:gilded30/ani-cli-mx
-sudo apt update
-```
-
-</details>
-
-<details>
-<summary>Manual Install</summary>
-
-System-wide:
-
-```sh
-sudo rm -f /usr/local/bin/ani-cli-mx
-sudo rm -f /usr/local/libexec/ani-cli-mx
-sudo rm -f /usr/local/share/man/man1/ani-cli-mx.1
-hash -r
-```
-
-User-local:
-
-```sh
-rm -f "$HOME/.local/bin/ani-cli-mx"
-rm -f "$HOME/.local/libexec/ani-cli-mx"
-rm -f "$HOME/.local/share/man/man1/ani-cli-mx.1"
-hash -r
-```
-
-Optional history cleanup:
-
-```sh
-rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/ani-cli-mx"
-```
-
-Check whether another `ani-cli-mx` command is still earlier in your `PATH`:
-
-```sh
-command -v -a ani-cli-mx
-```
-
-</details>
-
-## Dependencies
-
-Required:
-
-- `curl`
-- `sed`
-- `grep`
-- `fzf`
-- a supported player, usually `mpv`
-
-Platform notes:
-
-- on Windows, Git for Windows supplies Bash and the required POSIX utilities;
-  the official launcher avoids WSL
-- on Windows, the default history directory is `%LOCALAPPDATA%\ani-cli-mx`
-- `iina` is supported as a macOS player path
-- `vlc` is supported with `--vlc`
-### Optional Dependencies
-
-- `curl-impersonate` (`curl_chrome116` or a compatible wrapper) for AniDB search and playback; AniDB currently rejects regular `curl` through Cloudflare
-- `aria2c` for direct-file download support
-- `yt-dlp` for additional extractor coverage and download handling
-- `ffmpeg` as the m3u8 download fallback
-- `patch` for self-update via `-U`
-- `ani-skip` for intro skipping
-
-### Ani-Skip
-
-`ani-skip` is optional and currently only useful with `mpv`.
-
-Project: <https://github.com/synacktraa/ani-skip>
-
-If skip detection misses a title, try `--skip-title <title>`.
-
-## Usage
-
-If you installed from the current AUR development package, replace `ani-cli-mx` in the examples below with `ani-cli-mx-git`.
-
-Search interactively:
-
-```sh
-ani-cli-mx
-```
-
-Play a specific show:
-
-```sh
-ani-cli-mx "blue lock"
-```
-
-Play a range:
-
-```sh
-ani-cli-mx -e 5-6 "blue lock"
-```
-
-Play dubbed if available:
-
-```sh
-ani-cli-mx --dub "one piece"
-```
-
-Use the maintained English source directly (requires `curl-impersonate`):
-
-```sh
-ani-cli-mx --source anidb "one piece"
-```
-
-`ANI_CLI_ANIDB_CURL` can point to a compatible curl-impersonate executable when its installed name is not one of the detected wrappers.
-
-Use AnimeX directly (regular `curl` is sufficient):
-
-```sh
-ani-cli-mx --source animex "baki"
-```
-
-Automatic searches group the selector into contiguous `[ESPAÑOL]` results followed by `[ENGLISH]` results from AniDB and AnimeX.
-
-By default, ani-cli-mx keeps using the chosen Spanish source for the rest of the session, falling back to the normal source search if it stops producing valid links:
-
-```sh
-ani-cli-mx "one piece"
-```
-
-Fast mode starts playback from the first Spanish source that produces a valid playable link, instead of waiting for every source to finish checking.
-
-When an anime already exists in history, the episode selector marks the last watched episode with `*` and shows the legend in the prompt:
-
-```text
-Selecciona episodio (* ultimo visto):
-1
-2
-3 *
-4
-```
-
-Use the previous classic source search behavior:
-
-```sh
-ani-cli-mx --classic "one piece"
-```
-
-Start in continuous playback mode:
-
-```sh
-ani-cli-mx --continuous "one piece"
-```
-
-Continuous mode requires mpv because ani-cli-mx needs to detect when the player process finishes. With `--continuous`, ani-cli-mx starts playback and opens the playback menu with continuous mode already enabled. The menu shows the current mode in its prompt and lets you toggle it with `activar_modo_continuo` or `desactivar_modo_continuo`; when enabled from the menu, ani-cli-mx tracks the currently running player if possible, otherwise the next episode you play from the menu will advance automatically after its player finishes.
-
-Close the previous tracked player before opening another episode from the playback menu:
-
-```sh
-ani-cli-mx --close-previous "one piece"
-```
-
-You can also toggle this behavior from the playback menu with `activar_cerrar_reproductor_anterior` or `desactivar_cerrar_reproductor_anterior`.
-
-Download episodes:
-
-```sh
-ani-cli-mx -d -e 1-3 "cyberpunk edgerunners"
-```
-
-The playback menu also includes `descargar_episodio_actual`. Missing download
-tools are installed with the available system package manager. Downloads go to
-the user's Downloads/Descargas folder by default.
-
-More options are available in:
-
-- `ani-cli-mx --help`
-
-## FAQ
-
-Is there an official AUR package right now?
-
-- Yes. Stable releases use `ani-cli-mx`; development builds use `ani-cli-mx-git`.
-
-Are Ubuntu-based distros supported right now?
-
-- Yes. Add the PPA above, then install with `sudo apt install ani-cli-mx`.
-
-Is WSL supported right now?
-
-- Yes. Use your WSL distro of choice and follow the matching install path above.
-
-Is Windows supported without WSL?
-
-- Yes. Install the official Scoop package. Git for Windows supplies Bash, but
-  playback and every dependency run directly on Windows.
-
-Why `ani-cli-mx-git` instead of `ani-cli-mx` for Arch packaging?
-
-- `ani-cli-mx-git` follows the development branch. Stable releases use `ani-cli-mx`.
-
-Can I choose a different player?
-
-- Yes. Use `--vlc` or set `ANI_CLI_PLAYER`.
-
-Can I change the download directory?
-
-- Yes. Set `ANI_CLI_DOWNLOAD_DIR`.
-
-Can I change subtitle language or turn subtitles off?
-
-- No. For these sources, subtitles are typically baked into the video.
-
-Can I change dub language?
-
-- No. The project only switches between subbed and dubbed availability.
-
-Can I change media source manually?
-
-- Yes. Fast mode is the default, so ani-cli-mx keeps using the source you choose for later episodes in the same session. Use `--classic`, `--slow`, or `--no-fast` for the previous per-episode source search. You can also influence search/info with `--source`.
-
-Can I adjust resolution?
-
-- Yes. Use `-q`, for example `ani-cli-mx -q 1080 "blue lock"`.
-
-How can I download?
-
-- Use `-d` or choose `descargar_episodio_actual` from the playback menu. Files
-  download into Downloads/Descargas unless `ANI_CLI_DOWNLOAD_DIR` is set.
-
-How can I bulk download?
-
-- Use `-d -e start-end`, for example `ani-cli-mx "one piece" -d -e 1-1000`.
-
-## Docs
-
-- [CONTRIBUTING.md](./CONTRIBUTING.md)
-- [hacking.md](./hacking.md)
-- [disclaimer.md](./disclaimer.md)
-
-## Important
-
-This project accesses public-facing websites for its streaming and downloading capabilities and primarily acts as a Spanish-first anime terminal client. The developer(s) of this application have no affiliation with these content providers. This application hosts zero content and is intended for educational and personal use only. Use at your own risk.
-
-[Read the Full Disclaimer](./disclaimer.md)
+Y si tu terminal explota, tu ISP te manda una carta de amor o terminás viendo 12 temporadas seguidas
+en vez de dormir, **no me hago responsable**. Todo bajo tu propio riesgo, estrellita.
