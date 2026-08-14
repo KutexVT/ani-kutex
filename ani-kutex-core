@@ -661,6 +661,39 @@ preview_images_supported() {
     command -v kitten >/dev/null 2>&1
 }
 
+# Cuantas filas ocupa una portada depende de la proporcion de la celda, que
+# cambia con la fuente del terminal. Se mide una vez en el proceso principal,
+# donde stty y icat hablan de la misma ventana (dentro del preview de fzf no:
+# ahi stty ve el panel y icat la ventana entera). Se guarda alto/ancho x100.
+measure_cell_ratio() {
+    ratio_file="$(ani_cache_dir)/cell_ratio"
+    [ -s "$ratio_file" ] && return 0
+    preview_images_supported || return 0
+    win_px="$(kitten icat --print-window-size 2>/dev/null)"
+    case "$win_px" in *x*) : ;; *) return 0 ;; esac
+    px_w="${win_px%x*}"
+    px_h="${win_px#*x}"
+    term_size="$(stty size 2>/dev/null)"
+    term_rows="${term_size%% *}"
+    term_cols="${term_size##* }"
+    [ "${px_w:-0}" -gt 0 ] && [ "${px_h:-0}" -gt 0 ] || return 0
+    [ "${term_rows:-0}" -gt 0 ] && [ "${term_cols:-0}" -gt 0 ] || return 0
+    cell_w=$((px_w / term_cols))
+    cell_h=$((px_h / term_rows))
+    [ "$cell_w" -gt 0 ] && [ "$cell_h" -gt 0 ] || return 0
+    mkdir -p "$(dirname "$ratio_file")" 2>/dev/null
+    printf '%s\n' "$(((cell_h * 100) / cell_w))" >"$ratio_file" 2>/dev/null
+}
+
+preview_cell_ratio() {
+    [ -n "${ANI_CLI_PREVIEW_CELL_RATIO:-}" ] && printf '%s' "$ANI_CLI_PREVIEW_CELL_RATIO" && return 0
+    ratio_value="$(cat "$(ani_cache_dir)/cell_ratio" 2>/dev/null)"
+    case "$ratio_value" in
+        '' | *[!0-9]*) printf '%s' "200" ;;
+        *) printf '%s' "$ratio_value" ;;
+    esac
+}
+
 fetch_cover() {
     [ -n "$1" ] || return 1
     cover_dir="$(ani_cache_dir)/covers"
@@ -811,16 +844,17 @@ render_preview_entry() {
             # imagen acaba ocupando menos filas de las reservadas. Saltar las
             # reservadas a ciegas es lo que dejaba el hueco: aqui se calculan las
             # filas que la portada va a ocupar de verdad.
-            # En celdas: ancho = alto * (2 * img_w / img_h), asumiendo que una
-            # celda es el doble de alta que de ancha (lo habitual en kitty).
+            # En celdas: ancho = alto * (img_w / img_h) * (alto_celda / ancho_celda),
+            # con la proporcion de celda medida en esta terminal
             img_cols="${FZF_PREVIEW_COLUMNS:-40}"
+            cell_ratio="$(preview_cell_ratio)"
             img_dims="$(file -b "$cover_file" 2>/dev/null | grep -oE 'precision [0-9]+, [0-9]+x[0-9]+' | grep -oE '[0-9]+x[0-9]+' | tail -n 1)"
             img_w="${img_dims%x*}"
             img_h="${img_dims#*x}"
             if [ -n "$img_w" ] && [ -n "$img_h" ] && [ "$img_w" -gt 0 ] && [ "$img_h" -gt 0 ]; then
-                needed_cols=$(((2 * img_w * img_rows) / img_h))
+                needed_cols=$(((img_w * img_rows * cell_ratio) / (img_h * 100)))
                 if [ "$needed_cols" -gt "$img_cols" ]; then
-                    img_rows=$(((img_cols * img_h) / (2 * img_w)))
+                    img_rows=$(((img_cols * img_h * 100) / (img_w * cell_ratio)))
                     [ "$img_rows" -lt 3 ] && img_rows=3
                 fi
             fi
@@ -3550,6 +3584,7 @@ case "$search" in
         [ "$index" -eq "$index" ] 2>/dev/null && result=$(printf "%s" "$anime_list" | sed -n "${index}p")
         if [ -z "$index" ]; then
             anime_menu="$(printf "%s\n" "$anime_list" | build_anime_menu)"
+            measure_cell_ratio
             prefetch_menu_assets
             preview_enabled=1
             result="$(printf "%s" "$anime_menu" | nth "Selecciona anime: ")"
